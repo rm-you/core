@@ -1416,7 +1416,7 @@ function anonymize_ipaddress($ip, $byteCount=1){
   */
  function unserialize_noclasses($string){
  	$arrData = unserialize($string, array('allowed_classes' => false));
- 	if(is_object($arrData)) return false;
+ 	if(!is_array($arrData)) return [];
  	return $arrData;
  }
 

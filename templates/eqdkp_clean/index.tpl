@@ -60,7 +60,6 @@
 					<!-- IF not S_LOGGED_IN -->
 					<ul>
 						<li><a href="{EQDKP_CONTROLLER_PATH}Login{SEO_EXTENSION}{SID}" class="openLoginModal" onclick="return false;"><i class="fa fa-sign-in fa-lg"></i> <span class="hiddenSmartphoneOnly">{L_login}</span></a></li>
-						<!-- IF U_REGISTER != "" --><li>{U_REGISTER}</li><!-- ENDIF -->
 						
 						<li>
 							<div class="langswitch-tooltip-container">
@@ -431,44 +430,8 @@
 
 	<!-- IF not S_LOGGED_IN -->
 	<div id="dialog-login" title="{L_login}" style="display:none;">
-		<form method="post" action="{EQDKP_CONTROLLER_PATH}Login{SEO_EXTENSION}{SID}" name="login" id="login" class="fv_checkit">
-			<!-- LISTENER login_popup -->
-			<!-- IF S_BRIDGE_INFO -->
-			<div class="infobox infobox-large infobox-blue clearfix">
-				<i class="fa fa-info-circle fa-4x pull-left"></i> {L_login_bridge_notice}
-			</div>
-			<!-- ENDIF -->
-			<fieldset class="settings mediumsettings">
-				<dl>
-					<dt><label>{L_username}:</label></dt>
-					<dd>
-						<div class="input-icon">
-							<i class="fa fa-user"></i><input type="text" name="username" size="30" maxlength="30" class="input username" id="username" placeholder="{L_username}" required />
-						</div>
-						
-					</dd>
-				</dl>
-				<dl>
-					<dt><label>{L_password}:</label></dt>
-					<dd>
-						<div class="input-icon">
-							<i class="fa fa-key"></i>
-							<input type="password" name="password" pattern=".{3,}" size="30" maxlength="32" class="input password" id="password" placeholder="{L_password}" required />
-						</div>
-						<!-- IF S_SHOW_PWRESET_LINK -->
-						<br />{U_PWRESET_LINK}<br />
-						<!-- ENDIF -->
-						<br /><label><input type="checkbox" name="auto_login" />{L_remember_password}</label>
-					</dd>
-				</dl>
-			</fieldset>
-			<input type="text" name="{HONEYPOT_VALUE}" size="30" maxlength="30" class="userpass" />
-			<button type="submit" name="login" class="mainoption"><i class="fa fa-sign-in"></i> {L_login}</button>
-		</form>
 		<!-- IF AUTH_LOGIN_BUTTON != "" -->
-			<br /><br />
 			<fieldset class="settings mediumsettings">
-				<legend>{L_login_use_authmethods}</legend>
 				{AUTH_LOGIN_BUTTON}
 			</fieldset>
 			<!-- ENDIF -->

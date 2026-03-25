@@ -175,17 +175,20 @@ if( !class_exists( "plus_exchange" ) ) {
 
 		}
 
-		public function error($strErrorMessage, $arrInfo=array()){
-			$out = array(
-				'status'	=> 0,
-				'error'		=> $strErrorMessage,
-			);
-			if(count($arrInfo)){
-				$out['info'] = $arrInfo;
-			}
+                public function error($strErrorMessage, $arrInfo=array()){
+                        $out = array(
+                                'status'        => 0,
+                                'error'         => $strErrorMessage,
+                        );
+                        if(is_array($arrInfo) && count($arrInfo)){
+                                $out['info'] = $arrInfo;
+                        }
+                        elseif (is_string($arrInfo)) {
+                                $out['error'] .= " *AND* " . $arrInfo;
+                        }
 
-			return $out;
-		}
+                        return $out;
+                }
 
 		private function returnJSON($arrData){
 			if (!isset($arrData['status']) || $arrData['status'] != 0){

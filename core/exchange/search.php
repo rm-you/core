@@ -116,6 +116,7 @@ if (!class_exists('exchange_search')){
 						if($strUsername == $strSearchValue){
 							$out['direct']['member:'.$intUserID] = array(
 									'id' 			=> $intUserID,
+									'user_id'		=> $this->pdh->get('member', 'user', array($intUserID)),
 									'name'			=> $this->pdh->get('member', 'name', array($intUserID)),
 									'name_export'	=> $this->game->handle_export_charnames($this->pdh->get('member', 'name', array($intUserID)), $intUserID),
 									'main'			=> $this->pdh->get('member', 'is_main', array($intUserID)),
