@@ -197,6 +197,25 @@ if (!class_exists('exchange_search')){
 						);
 
 					}
+				}elseif($strSearchIn == 'auth_account'){
+					$strMethod = (isset($params['get']['method'])) ? $params['get']['method'] : 'discord';
+					$userid = $this->pdh->get('user', 'userid_for_authaccount', array($strSearchFor, $strMethod));
+					if($userid){
+						$user_chars = $this->pdh->get('member', 'connection_id', array($userid));
+						if(is_array($user_chars)){
+							foreach($user_chars as $intMemberID){
+								$out['direct']['member:'.$intMemberID] = array(
+										'id'		=> $intMemberID,
+										'user_id'	=> $userid,
+										'name'		=> $this->pdh->get('member', 'name', array($intMemberID)),
+										'main'		=> $this->pdh->get('member', 'is_main', array($intMemberID)),
+										'class'		=> $this->pdh->get('member', 'classid', array($intMemberID)),
+										'classname'	=> $this->pdh->get('member', 'classname', array($intMemberID)),
+								);
+							}
+						}
+					}
+					return $out;
 				}
 
 			} else {
