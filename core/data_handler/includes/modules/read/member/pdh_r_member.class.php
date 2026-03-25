@@ -1039,7 +1039,12 @@ if ( !class_exists( "pdh_r_member" ) ) {
 		}
 
 		public function get_html_user($memberid){
-			return $this->pdh->get('user', 'name', array($this->get_user($memberid)));
+			$user_id = $this->get_user($memberid);
+			if (!$user_id) return '';
+			$username = $this->pdh->get('user', 'name', array($user_id));
+			$url = $this->routing->build('User', $username, 'u'.$user_id);
+			return '<a href="'.$url.'#characters">'.$username.'</a>';
+			#return $this->pdh->get('user', 'name', array($this->get_user($memberid)));
 		}
 
 		public function get_raidgroups($memberid){
