@@ -112,6 +112,14 @@ if (!class_exists('exchange_search')){
 						//Profiledata
 						$arrData = $this->pdh->get('member', 'profiledata', array($intUserID));
 
+						// Resolve Discord auth_account for the member's user
+						$intMemberUserId = $this->pdh->get('member', 'user', array($intUserID));
+						$arrAuthAccounts = ($intMemberUserId) ? $this->pdh->get('user', 'auth_account', array($intMemberUserId)) : array();
+						$strDiscordId = (isset($arrAuthAccounts['discord'])) ? $arrAuthAccounts['discord'] : '';
+
+						// Resolve race name from profiledata
+						$intRaceId = (isset($arrData['race'])) ? (int)$arrData['race'] : 0;
+						$strRaceName = ($intRaceId) ? $this->game->get_name('races', $intRaceId) : '';
 
 						if($strUsername == $strSearchValue){
 							$out['direct']['member:'.$intUserID] = array(
@@ -122,9 +130,11 @@ if (!class_exists('exchange_search')){
 									'main'			=> $this->pdh->get('member', 'is_main', array($intUserID)),
 									'class'			=> $this->pdh->get('member', 'classid', array($intUserID)),
 									'classname'		=> $this->pdh->get('member', 'classname', array($intUserID)),
+									'racename'		=> $strRaceName,
 									'roles'			=> $arrRoles,
 									'raidgroups'	=> $arrRaidgroups,
 									'profiledata'	=> $arrData,
+									'auth_account'	=> $strDiscordId,
 							);
 						} elseif(stripos($strUsername, $strSearchValue) !== false){
 							$out['relevant']['member:'.$intUserID] = array(
@@ -134,9 +144,11 @@ if (!class_exists('exchange_search')){
 									'main'			=> $this->pdh->get('member', 'is_main', array($intUserID)),
 									'class'			=> $this->pdh->get('member', 'classid', array($intUserID)),
 									'classname'		=> $this->pdh->get('member', 'classname', array($intUserID)),
+									'racename'		=> $strRaceName,
 									'roles'			=> $arrRoles,
 									'raidgroups'	=> $arrRaidgroups,
 									'profiledata'	=> $arrData,
+									'auth_account'	=> $strDiscordId,
 							);
 						}
 					}
@@ -204,6 +216,8 @@ if (!class_exists('exchange_search')){
 						$user_chars = $this->pdh->get('member', 'connection_id', array($userid));
 						if(is_array($user_chars)){
 							foreach($user_chars as $intMemberID){
+								$arrMemberData = $this->pdh->get('member', 'profiledata', array($intMemberID));
+								$intMemberRaceId = (isset($arrMemberData['race'])) ? (int)$arrMemberData['race'] : 0;
 								$out['direct']['member:'.$intMemberID] = array(
 										'id'		=> $intMemberID,
 										'user_id'	=> $userid,
@@ -211,6 +225,8 @@ if (!class_exists('exchange_search')){
 										'main'		=> $this->pdh->get('member', 'is_main', array($intMemberID)),
 										'class'		=> $this->pdh->get('member', 'classid', array($intMemberID)),
 										'classname'	=> $this->pdh->get('member', 'classname', array($intMemberID)),
+										'racename'	=> ($intMemberRaceId) ? $this->game->get_name('races', $intMemberRaceId) : '',
+										'profiledata'	=> $arrMemberData,
 								);
 							}
 						}
