@@ -507,16 +507,15 @@ class core extends gen_class {
 			));
 
 			if (!$this->user->is_signedin()) {
-				$this->tpl->add_js('$(".openLoginModal").off("click").on("click", function(e) {
-					e.preventDefault();
-					var authButtons = $("#dialog-login button.thirdpartylogin");
-					if (authButtons.length === 1 && $("#dialog-login form").length === 0) {
-						authButtons[0].click();
-					} else {
-						$("#dialog-login").dialog("open");
+				$this->tpl->add_js("(function() {
+					var authButtons = $(\"#dialog-login button.thirdpartylogin\");
+					if (authButtons.length === 1 && $(\"#dialog-login form\").length === 0) {
+						var match = (authButtons.attr(\"onclick\") || \"\").match(/window\\.location\\s*=\\s*['\"]([^'\"]+)['\"]/);
+						if (match) {
+							$(\".openLoginModal\").attr(\"href\", match[1]).removeClass(\"openLoginModal\").removeAttr(\"onclick\");
+						}
 					}
-					return false;
-				});', 'docready');
+				})();", 'docready');
 			}
 			
 			if (isset($this->page_body) && $this->page_body == 'full'){
