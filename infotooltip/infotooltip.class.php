@@ -559,7 +559,7 @@ if(!class_exists('infotooltip')) {
 		}
 
 		public function get_precache_progress_file(){
-			return $this->pfh->FolderPath('itt_precache.progress', 'eqdkp');
+			return $this->pfh->FilePath('itt_precache.progress', 'eqdkp');
 		}
 
 		private function get_cached_item_state($item_name, $lang){
