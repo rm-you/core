@@ -26,7 +26,7 @@ if ( !defined('EQDKP_INC') ){
 class urlfetcher  extends gen_class {
 
 	private $useragent			= '';		// User Agent
-	private $timeout			= 15;											// Timeout
+	private $timeout			= 5;											// Timeout
 	private $conn_timeout		= 5;											// Connection Timeout
 	private $methods			= array('curl', 'file_gets');			// available function methods
 	private $method				= '';											// the selected method

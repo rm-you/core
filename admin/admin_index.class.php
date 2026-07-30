@@ -282,7 +282,7 @@ class admin_index extends gen_class {
 						'LOCATION'		=> $this->admin_functions->resolve_eqdkp_page($row['session_page']),
 						'BROWSER'		=> $this->admin_functions->resolve_browser($row['session_browser']),
 						'IP_ADDRESS'	=> sanitize($row['session_ip']),
-						'IP_HOSTNAME'	=> @gethostbyaddr($row['session_ip']),
+						'IP_HOSTNAME'	=> sanitize($row['session_ip']),
 				));
 				$arrDone[$strDoneFlag] = 1;
 				$online_count++;
