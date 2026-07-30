@@ -283,6 +283,39 @@ if(!class_exists('infotooltip')) {
 			return true;
 		}
 
+		private function normalize_item_name($item_name){
+			$item_name = html_entity_decode(htmlspecialchars_decode($item_name, ENT_QUOTES), ENT_QUOTES, 'UTF-8');
+			$item_name = str_replace(array('`', "\xe2\x80\x98", "\xe2\x80\x99", '´'), "'", $item_name);
+			return preg_replace('/\s+/', ' ', trim($item_name));
+		}
+
+		private function cache_lookup_key($item_name, $game_id){
+			return ($item_name) ? $item_name : $game_id;
+		}
+
+		private function cache_data_ext($data){
+			if(!is_array($data) || !count($data)){
+				return '';
+			}
+			foreach($data as $value){
+				if(strlen((string)$value) > 0){
+					return '_'.base64_encode(serialize($data));
+				}
+			}
+			return '';
+		}
+
+		private function delete_cache_file($lang, $key, $ext=''){
+			if(!$key){
+				return true;
+			}
+			$filepath = $this->pfh->FilePath(md5($this->config['game'].'_'.$lang.'_'.$key.$ext).'.itt', 'itt_cache');
+			if(is_file($filepath)){
+				return $this->pfh->Delete($filepath);
+			}
+			return true;
+		}
+
 		/*
 		 * deletes item from cache
 		 * @string $item_name
@@ -290,17 +323,11 @@ if(!class_exists('infotooltip')) {
 		 * return @bool
 		 */
 		private function delete_item($item_name, $lang, $game_id, $ext='') {
-			$iddel = true;
-			$namedel = true;
-			if($item_name) {
-				$this->pdl->log('infotooltip', $this->config['game'].'_'.$lang.'_'.$item_name.$ext.' deleted from cache.');
-				$filepath = $this->pfh->FilePath(md5($this->config['game'].'_'.$lang.'_'.$item_name.$ext).'.itt');
-				if(is_file($filepath)) $namedel = $this->pfh->Delete($filepath);
-			}
-			if($game_id) {
-				$this->pdl->log('infotooltip', $this->config['game'].'_'.$lang.'_'.$game_id.$ext.' deleted from cache.');
-				$filepath = $this->pfh->FilePath(md5($this->config['game'].'_'.$lang.'_'.$game_id.$ext).'.itt');
-				if(is_file($filepath)) $iddel = $this->pfh->Delete($filepath);
+			$item_name = $this->normalize_item_name($item_name);
+			$namedel = $this->delete_cache_file($lang, $item_name, $ext);
+			$iddel = $this->delete_cache_file($lang, $game_id, $ext);
+			if(strpos($item_name, "'") !== false){
+				$namedel = $this->delete_cache_file($lang, str_replace("'", '`', $item_name), $ext) && $namedel;
 			}
 			return ($iddel && $namedel);
 		}
@@ -319,14 +346,12 @@ if(!class_exists('infotooltip')) {
 		 * return @array
 		 */
 		protected function update($item_name, $lang=false, $game_id=false, $data=array()) {
+			$item_name = $this->normalize_item_name($item_name);
 			$this->pdl->log('infotooltip', 'update called: item_name: '.$item_name.', lang: '.$lang.', game_id: '.$game_id.', data: '.implode(', ', $data));
 			$lang = (!$lang) ? $this->config['game_lang'] : $lang;
 			$arrParser = $this->load_parser();
 			$this->init_cache();
-			$ext = '';
-			if(count($data) > 0) {
-				$ext = '_'.base64_encode(serialize($data));
-			}
+			$ext = $this->cache_data_ext($data);
 			foreach($arrParser as $parse) {
 				if(!$parse->av_langs[$lang]) {
 					$lang = $this->config['game_lang'];
@@ -358,18 +383,15 @@ if(!class_exists('infotooltip')) {
 		 * return @array
 		 */
 		public function getitem($item_name, $lang=false, $game_id=false, $forceupdate=false, $data=array()) {
-			$item_name = htmlspecialchars_decode($item_name, ENT_QUOTES);
+			$item_name = $this->normalize_item_name($item_name);
 			$game = $this->config['game'];
 			$this->pdl->log('infotooltip', 'getitem called: item_name: '.$item_name.', lang: '.$lang.', game_id: '.$game_id.', forceupdate: '.(($forceupdate) ? 'true' : 'false') .', data: '.implode(', ', $data));
 			$lang = (!$lang || $lang == '') ? $this->config['game_language'] : $lang;
 			$this->init_cache();
-			$ext = '';
-			if(count($data) > 0) {
-				$ext = '_'.base64_encode(serialize($data));
-			}
+			$ext = $this->cache_data_ext($data);
 
 			if(!$forceupdate) {
-				$cache_name = $this->config['game'].'_'.$lang.'_'.($game_id ? $game_id : $item_name).$ext;
+				$cache_name = $this->config['game'].'_'.$lang.'_'.$this->cache_lookup_key($item_name, $game_id).$ext;
 
 				$this->pdl->log('infotooltip', 'Search in cache: '.$cache_name);
 				$cache_name = md5($cache_name).'.itt';
@@ -424,17 +446,14 @@ if(!class_exists('infotooltip')) {
 			return $this->item_return($item);
 		}
 
-		public function getcacheditem($item_name, $lang=false, $game_id=false, $onlyicon=false, $noicon=false, $data=array()){
-			$item_name = htmlspecialchars_decode($item_name, ENT_QUOTES);
+		public function getcacheditem($item_name, $lang=false, $game_id=false, $onlyicon=0, $noicon=false, $data=array()){
+			$item_name = $this->normalize_item_name($item_name);
 			$game = $this->config['game'];
 			$lang = (!$lang || $lang == '') ? $this->config['game_language'] : $lang;
 			$this->init_cache();
-			$ext = '';
-			if(is_array($data) && count($data) > 0) {
-				$ext = '_'.base64_encode(serialize($data));
-			}
+			$ext = $this->cache_data_ext($data);
 
-			$cache_name = $game.'_'.$lang.'_'.($game_id ? $game_id : $item_name).$ext;
+			$cache_name = $game.'_'.$lang.'_'.$this->cache_lookup_key($item_name, $game_id).$ext;
 			$cache_name = md5($cache_name).'.itt';
 
 			if(in_array($cache_name, $this->cached)) {
