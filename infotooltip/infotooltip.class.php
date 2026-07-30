@@ -557,6 +557,92 @@ if(!class_exists('infotooltip')) {
 			$script_name = ( $script_name != '' ) ? $script_name . '/' : '';
 			return ($blnWithServerpath) ? $this->httpHost().'/'.$script_name : $this->httpHost();
 		}
+
+		public function get_precache_progress_file(){
+			return $this->pfh->FolderPath('itt_precache.progress', 'eqdkp');
+		}
+
+		private function get_cached_item_state($item_name, $lang){
+			$this->init_cache();
+			$cache_name = md5($this->config['game'].'_'.$lang.'_'.$item_name).'.itt';
+			if(!in_array($cache_name, $this->cached)){
+				return 'missing';
+			}
+
+			$item = unserialize(file_get_contents($this->pfh->FilePath($cache_name, 'itt_cache')), array('allowed_classes' => false));
+			if(!$item){
+				return 'missing';
+			}
+			if(isset($item['baditem'])){
+				$cache_age = time() - filemtime($this->pfh->FilePath($cache_name, 'itt_cache'));
+				if($cache_age < $this->baditem_cache_ttl){
+					return 'baditem_cached';
+				}
+				return 'baditem_expired';
+			}
+			return 'cached';
+		}
+
+		public function precache_batch($batch_size = 30, $delay_seconds = 3){
+			$lang = $this->config['game_language'];
+			$progress_file = $this->get_precache_progress_file();
+			$arrNames = array();
+
+			$objQuery = $this->db->query("SELECT DISTINCT item_name FROM __items WHERE item_name != '' ORDER BY item_name");
+			if($objQuery){
+				while($row = $objQuery->fetchAssoc()){
+					$arrNames[] = $row['item_name'];
+				}
+			}
+
+			$stats = array(
+				'fetched' => 0,
+				'skipped' => 0,
+				'failed' => 0,
+				'processed' => 0,
+				'total' => count($arrNames),
+				'next_offset' => 0,
+			);
+
+			if(!count($arrNames)){
+				return $stats;
+			}
+
+			$offset = 0;
+			if(is_file($progress_file)){
+				$offset = intval(trim(file_get_contents($progress_file)));
+			}
+			if($offset >= count($arrNames)){
+				$offset = 0;
+			}
+
+			$end = min($offset + max(1, intval($batch_size)), count($arrNames));
+			for($i = $offset; $i < $end; $i++){
+				$name = $arrNames[$i];
+				$cache_state = $this->get_cached_item_state($name, $lang);
+				if($cache_state === 'cached' || $cache_state === 'baditem_cached'){
+					$stats['skipped']++;
+					continue;
+				}
+
+				$item = $this->getitem($name, $lang);
+				$stats['processed']++;
+				if(isset($item['baditem']) && $item['baditem']){
+					$stats['failed']++;
+				} else {
+					$stats['fetched']++;
+				}
+
+				if($delay_seconds > 0 && $i < $end - 1){
+					sleep(intval($delay_seconds));
+				}
+			}
+
+			$new_offset = ($end >= count($arrNames)) ? 0 : $end;
+			$this->pfh->putContent($progress_file, (string)$new_offset);
+			$stats['next_offset'] = $new_offset;
+			return $stats;
+		}
 	}
 }
 
