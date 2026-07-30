@@ -473,6 +473,24 @@ if(!class_exists('infotooltip')) {
 			return false;
 		}
 
+		private function decorate_tooltip_html($html){
+			if(!strlen($html) || strpos($html, 'background:#333') !== false){
+				return $html;
+			}
+
+			$style = 'background:#333;border:1px solid #a9a9a9;border-radius:5px;box-shadow:0 0 3px #000;color:#e5e0dd;font:13px Arial,Helvetica,sans-serif;max-width:350px;min-width:150px;padding:3px;';
+			if(strpos($html, 'fhtt-wrapper margin') !== false){
+				return preg_replace(
+					'#<div class="fhtt-wrapper margin">#',
+					'<div class="fhtt-wrapper margin" style="'.$style.'">',
+					$html,
+					1
+				);
+			}
+
+			return $html;
+		}
+
 		private function item_return($item) {
 			if(!isset($item['html']) OR !$item['html'] OR !isset($item['name'])) {
 				$item['html'] = file_get_contents($this->root_path.'games/'.$this->config['game'].'/infotooltip/templates/'.$this->config['game'].'_popup.tpl');
@@ -483,6 +501,7 @@ if(!class_exists('infotooltip')) {
 			} else {
 				$item['html'] = str_replace('{DEBUG}', '', $item['html']);
 			}
+			$item['html'] = $this->decorate_tooltip_html($item['html']);
 			return $item;
 		}
 
