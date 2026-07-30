@@ -160,12 +160,7 @@ $(function() {
 		user_clock();
 
 		$( ".openLoginModal" ).on('click', function() {
-			var authButtons = $("#dialog-login button.thirdpartylogin");
-			if (authButtons.length === 1 && $("#dialog-login form").length === 0) {
-				authButtons.trigger('click');
-			} else {
-				$( "#dialog-login" ).dialog( "open" );
-			}
+			$( "#dialog-login" ).dialog( "open" );
 		});
 
 		/* Notifications */

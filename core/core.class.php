@@ -505,6 +505,19 @@ class core extends gen_class {
 				'USER_IS_AWAY'				=> ($this->user->data['user_id'] > 0) ? $this->pdh->get('calendar_raids_attendees', 'user_awaymode', array($this->user->data['user_id'])) : false,
 				'S_DISABLE_GUILD_FEATURES'	=> ($this->config->get('disable_guild_features') == 1) ? true : false,
 			));
+
+			if (!$this->user->is_signedin()) {
+				$this->tpl->add_js('$(".openLoginModal").off("click").on("click", function(e) {
+					e.preventDefault();
+					var authButtons = $("#dialog-login button.thirdpartylogin");
+					if (authButtons.length === 1 && $("#dialog-login form").length === 0) {
+						authButtons[0].click();
+					} else {
+						$("#dialog-login").dialog("open");
+					}
+					return false;
+				});', 'docready');
+			}
 			
 			if (isset($this->page_body) && $this->page_body == 'full'){
 				$this->tpl->assign_vars(array(
