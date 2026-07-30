@@ -891,6 +891,10 @@ if (!class_exists("pdh_r_user")){
 		private function decrypt_data_all(){
 			if(!$this->blnDecryptedAll){
 				foreach($this->users as $userid => $row){
+					//Skip users already decrypted by decrypt_data_single; re-decrypting
+					//an unserialized auth_account array is fatal on PHP 8.
+					if(in_array($row['user_id'], $this->arrUserdataDecrypted)) continue;
+
 					//decrypt email address
 					$this->users[$row['user_id']]['user_email']			= $this->encrypt->decrypt($row['user_email']);
 					$tmpCryptAuthAccount								= $this->encrypt->decrypt($row['auth_account']);
