@@ -27,6 +27,7 @@ if(!class_exists('infotooltip')) {
 	class infotooltip extends gen_class {
 		public static $shortcuts = array('pfh' => array('file_handler', array('infotooltips')), 'puf' => 'urlfetcher', 'settings' => 'config');
 
+		private $baditem_cache_ttl = 21600; // 6 hours
 		private $avail_parser	= array();
 
 		protected $parser		= false;
@@ -374,10 +375,17 @@ if(!class_exists('infotooltip')) {
 				$cache_name = md5($cache_name).'.itt';
 
 				if(in_array($cache_name, $this->cached)) {
-					$item = unserialize(file_get_contents($this->pfh->FilePath($cache_name, 'itt_cache')), array('allowed_classes' => false));
+					$cache_filepath = $this->pfh->FilePath($cache_name, 'itt_cache');
+					$item = unserialize(file_get_contents($cache_filepath), array('allowed_classes' => false));
 					if(isset($item['baditem'])){
-						$this->pdl->log('infotooltip', 'Item found, but item is baditem. forceupdate set to true.');
-						$forceupdate = true;
+						$cache_age = time() - filemtime($cache_filepath);
+						if($cache_age >= $this->baditem_cache_ttl){
+							$this->pdl->log('infotooltip', 'Item found, but item is baditem and cache expired. forceupdate set to true.');
+							$forceupdate = true;
+						} else {
+							$this->pdl->log('infotooltip', 'Item found, but item is baditem. Using negative cache.');
+							return $this->item_return($item);
+						}
 					} else {
 						$this->pdl->log('infotooltip', 'Item found.');
 						return $this->item_return($item);
