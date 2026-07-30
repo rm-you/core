@@ -85,7 +85,7 @@ class login_discord extends gen_class {
 		$this->user->setSessionVar('_discord_state', $state);
 
 		$client = new OAuth2\Client($this->appid, $this->appsecret);
-		$auth_url = $client->getAuthenticationUrl($this->AUTHORIZATION_ENDPOINT, $this->redirURL, array('scope' => 'identify email', 'state' => $state));
+		$auth_url = $client->getAuthenticationUrl($this->AUTHORIZATION_ENDPOINT, $this->redirURL, array('scope' => 'identify email', 'state' => $state, 'prompt' => 'none'));
 
 		return $auth_url;
 	}
