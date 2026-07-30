@@ -241,7 +241,10 @@ if(!class_exists('infotooltip')) {
 		/*
 		 * inits cache
 		 */
-		private function init_cache() {
+		private function init_cache($force=false) {
+			if($force){
+				$this->cached = array();
+			}
 			if(empty($this->cached)) {
 				$this->cache_path = $this->pfh->FolderPath('', 'itt_cache');
 				$this->cached = scandir($this->cache_path);
@@ -253,8 +256,22 @@ if(!class_exists('infotooltip')) {
 		 * @array $item
 		 * return @bool
 		 */
+		private function write_cache_file($cache_key, $data, $ext=''){
+			if(!strlen($data)){
+				return false;
+			}
+			$filepath = $this->pfh->FilePath($cache_key.'.itt', 'itt_cache', false);
+			return $this->pfh->putContent($filepath, $data);
+		}
+
 		private function cache_item($item, $game_id, $name2search, $ext='') {
+			if(!is_array($item) || !count($item)){
+				return false;
+			}
 			$data = serialize($item);
+			if(!strlen($data)){
+				return false;
+			}
 
 			//add color to item-table
 			if(isset($item['color'])) {
@@ -275,10 +292,11 @@ if(!class_exists('infotooltip')) {
 			}
 			$this->pdl->log('infotooltip', $item['name'].' added to cache in lang '.$item['lang'].'.');
 
-			if(!empty($item['name'])) $this->pfh->putContent($this->pfh->FilePath(md5($this->config['game'].'_'.$item['lang'].'_'.$item['name'].$ext).'.itt', 'itt_cache'), $data);
-			if(!empty($name2search)) $this->pfh->putContent($this->pfh->FilePath(md5($this->config['game'].'_'.$item['lang'].'_'.$name2search.$ext).'.itt', 'itt_cache'), $data);
-			if(!empty($item['id'])) $this->pfh->putContent($this->pfh->FilePath(md5($this->config['game'].'_'.$item['lang'].'_'.$item['id'].$ext).'.itt', 'itt_cache'), $data);
-			if(!empty($game_id)) $this->pfh->putContent($this->pfh->FilePath(md5($this->config['game'].'_'.$item['lang'].'_'.$game_id.$ext).'.itt', 'itt_cache'), $data);
+			$lang = $item['lang'];
+			if(!empty($item['name'])) $this->write_cache_file(md5($this->config['game'].'_'.$lang.'_'.$item['name'].$ext), $data);
+			if(!empty($name2search)) $this->write_cache_file(md5($this->config['game'].'_'.$lang.'_'.$name2search.$ext), $data);
+			if(!empty($item['id'])) $this->write_cache_file(md5($this->config['game'].'_'.$lang.'_'.$item['id'].$ext), $data);
+			if(!empty($game_id)) $this->write_cache_file(md5($this->config['game'].'_'.$lang.'_'.$game_id.$ext), $data);
 
 			return true;
 		}
@@ -369,6 +387,9 @@ if(!class_exists('infotooltip')) {
 					}
 					break; //no errors occured, item fully fetched
 				}
+			}
+			if(!isset($item) || !is_array($item)){
+				$item = array('baditem' => true, 'name' => $item_name, 'lang' => $lang);
 			}
 			$this->cache_item($item, $game_id, $item_name, $ext);
 			return $item;
@@ -492,8 +513,33 @@ if(!class_exists('infotooltip')) {
 			return false;
 		}
 
+		private function layout_p99wiki_item_header($html){
+			if(strpos($html, 'item-header') !== false || strpos($html, 'itemtopbg') === false || strpos($html, 'itemicon') === false){
+				return $html;
+			}
+
+			if(!preg_match('#<div class="itemtitle">(.*?)</div>#s', $html, $title_match)){
+				return $html;
+			}
+
+			$icon_html = '';
+			if(preg_match('#<div class="itemicon">\s*(?:<div class="floatright">)?\s*(<img[^>]+>)\s*(?:</div>)?\s*</div>#s', $html, $icon_match)){
+				$icon_html = '<div class="itemicon">'.$icon_match[1].'</div>';
+				$html = preg_replace('#<div class="itemicon">\s*(?:<div class="floatright">)?\s*<img[^>]+>\s*(?:</div>)?\s*</div>\s*#s', '', $html, 1);
+			}
+
+			$header = '<div class="itemtopbg"><div class="item-header">'.$icon_html.'<div class="itemtitle">'.$title_match[1].'</div></div></div>';
+			return preg_replace('#<div class="itemtopbg">\s*<div class="itemtitle">.*?</div>\s*</div>#s', $header, $html, 1);
+		}
+
 		private function decorate_tooltip_html($html){
-			if(!strlen($html) || strpos($html, 'background:#333') !== false){
+			if(!strlen($html)){
+				return $html;
+			}
+
+			$html = $this->layout_p99wiki_item_header($html);
+
+			if(strpos($html, 'background:#333') !== false){
 				return $html;
 			}
 
@@ -601,24 +647,51 @@ if(!class_exists('infotooltip')) {
 		}
 
 		private function get_cached_item_state($item_name, $lang){
-			$this->init_cache();
+			$item_name = $this->normalize_item_name($item_name);
 			$cache_name = md5($this->config['game'].'_'.$lang.'_'.$item_name).'.itt';
-			if(!in_array($cache_name, $this->cached)){
+			$cache_filepath = $this->pfh->FilePath($cache_name, 'itt_cache', false);
+			if(!is_file($cache_filepath) || filesize($cache_filepath) < 1){
 				return 'missing';
 			}
 
-			$item = unserialize(file_get_contents($this->pfh->FilePath($cache_name, 'itt_cache')), array('allowed_classes' => false));
+			$item = unserialize(file_get_contents($cache_filepath), array('allowed_classes' => false));
 			if(!$item){
 				return 'missing';
 			}
 			if(isset($item['baditem'])){
-				$cache_age = time() - filemtime($this->pfh->FilePath($cache_name, 'itt_cache'));
+				$cache_age = time() - filemtime($cache_filepath);
 				if($cache_age < $this->baditem_cache_ttl){
 					return 'baditem_cached';
 				}
 				return 'baditem_expired';
 			}
 			return 'cached';
+		}
+
+		public function precache_summary(){
+			$lang = $this->config['game_language'];
+			$this->init_cache(true);
+			$summary = array(
+				'total' => 0,
+				'cached' => 0,
+				'missing' => 0,
+				'baditem_cached' => 0,
+				'baditem_expired' => 0,
+			);
+
+			$objQuery = $this->db->query("SELECT DISTINCT item_name FROM __items WHERE item_name != '' ORDER BY item_name");
+			if(!$objQuery){
+				return $summary;
+			}
+
+			while($row = $objQuery->fetchAssoc()){
+				$summary['total']++;
+				$state = $this->get_cached_item_state($row['item_name'], $lang);
+				$summary[$state]++;
+			}
+
+			$summary['remaining'] = $summary['missing'] + $summary['baditem_expired'];
+			return $summary;
 		}
 
 		public function precache_batch($batch_size = 30, $delay_seconds = 3){
@@ -633,11 +706,13 @@ if(!class_exists('infotooltip')) {
 				}
 			}
 
+			$fetch_target = max(1, intval($batch_size));
 			$stats = array(
 				'fetched' => 0,
 				'skipped' => 0,
 				'failed' => 0,
 				'processed' => 0,
+				'scanned' => 0,
 				'total' => count($arrNames),
 				'next_offset' => 0,
 			);
@@ -654,12 +729,14 @@ if(!class_exists('infotooltip')) {
 				$offset = 0;
 			}
 
-			$end = min($offset + max(1, intval($batch_size)), count($arrNames));
-			for($i = $offset; $i < $end; $i++){
+			$i = $offset;
+			while($stats['processed'] < $fetch_target && $i < count($arrNames)){
 				$name = $arrNames[$i];
+				$stats['scanned']++;
 				$cache_state = $this->get_cached_item_state($name, $lang);
 				if($cache_state === 'cached' || $cache_state === 'baditem_cached'){
 					$stats['skipped']++;
+					$i++;
 					continue;
 				}
 
@@ -671,12 +748,13 @@ if(!class_exists('infotooltip')) {
 					$stats['fetched']++;
 				}
 
-				if($delay_seconds > 0 && $i < $end - 1){
+				if($delay_seconds > 0 && $stats['processed'] < $fetch_target && $i < count($arrNames) - 1){
 					sleep(intval($delay_seconds));
 				}
+				$i++;
 			}
 
-			$new_offset = ($end >= count($arrNames)) ? 0 : $end;
+			$new_offset = ($i >= count($arrNames)) ? 0 : $i;
 			$this->pfh->putContent($progress_file, (string)$new_offset);
 			$stats['next_offset'] = $new_offset;
 			return $stats;
