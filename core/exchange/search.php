@@ -71,13 +71,20 @@ if (!class_exists('exchange_search')){
 				}elseif($strSearchIn == 'charname'){
 					$arrUsers = $this->pdh->get('member', 'id_list');
 					$strSearchValue = utf8_strtolower($strSearchFor);
+					$arrTotalRaidgroups = $this->pdh->aget('raid_groups', 'name', false, array($this->pdh->get('raid_groups', 'id_list')));
 					foreach($arrUsers as $intUserID){
 						$strUsername = $this->pdh->get('member', 'name', array($intUserID));
 						$strUsername = utf8_strtolower($strUsername);
 
+						$blnDirectMatch = ($strUsername == $strSearchValue);
+						$blnRelevantMatch = (!$blnDirectMatch && stripos($strUsername, $strSearchValue) !== false);
+						if(!$blnDirectMatch && !$blnRelevantMatch){
+							continue;
+						}
+
 						$roles = $this->pdh->get('roles', 'memberroles', array($this->pdh->get('member', 'classid', array($intUserID))));
+						$arrRoles = array();
 						if (is_array($roles)){
-							$arrRoles = array();
 							foreach ($roles as $roleid => $rolename){
 								$arrRoles['role:'.$roleid] = array(
 										'id'		=> $roleid,
@@ -89,7 +96,6 @@ if (!class_exists('exchange_search')){
 
 						//Raidgroups
 						$arrRaidgroups = array();
-						$arrTotalRaidgroups = $this->pdh->aget('raid_groups', 'name', false, array($this->pdh->get('raid_groups', 'id_list')));
 						if(count($arrTotalRaidgroups)){
 							foreach($arrTotalRaidgroups as $raidgroupid => $raidgroupname) {
 								$status = $this->pdh->get('raid_groups_members', 'membership_status', array($intUserID, $raidgroupid));
@@ -121,7 +127,7 @@ if (!class_exists('exchange_search')){
 						$intRaceId = (isset($arrData['race'])) ? (int)$arrData['race'] : 0;
 						$strRaceName = ($intRaceId) ? $this->game->get_name('races', $intRaceId) : '';
 
-						if($strUsername == $strSearchValue){
+						if($blnDirectMatch){
 							$out['direct']['member:'.$intUserID] = array(
 									'id' 			=> $intUserID,
 									'user_id'		=> $this->pdh->get('member', 'user', array($intUserID)),
@@ -136,7 +142,7 @@ if (!class_exists('exchange_search')){
 									'profiledata'	=> $arrData,
 									'auth_account'	=> $strDiscordId,
 							);
-						} elseif(stripos($strUsername, $strSearchValue) !== false){
+						} else {
 							$out['relevant']['member:'.$intUserID] = array(
 									'id' 			=> $intUserID,
 									'name'			=> $this->pdh->get('member', 'name', array($intUserID)),
